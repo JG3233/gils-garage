@@ -1,0 +1,22 @@
+// CloudFront Function (viewer-request): www -> apex redirect and pretty-URL rewrite.
+function handler(event) {
+  var request = event.request;
+  var host = request.headers.host && request.headers.host.value;
+
+  if (host === "www.${apex}") {
+    return {
+      statusCode: 301,
+      statusDescription: "Moved Permanently",
+      headers: { location: { value: "https://${apex}" + request.uri } },
+    };
+  }
+
+  var uri = request.uri;
+  if (uri.charAt(uri.length - 1) === "/") {
+    request.uri = uri + "index.html";
+  } else if (uri.lastIndexOf(".") < uri.lastIndexOf("/") + 1) {
+    // No file extension in the last path segment: treat as a directory.
+    request.uri = uri + "/index.html";
+  }
+  return request;
+}

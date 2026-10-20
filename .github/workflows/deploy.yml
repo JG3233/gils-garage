@@ -1,0 +1,73 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "content/**"
+      - "static/**"
+      - "cmd/**"
+      - "internal/**"
+      - "site.toml"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The OIDC trust policy only accepts tokens whose sub is
+    # repo:JG3233/gils-garage:environment:production, so this line is load-bearing.
+    environment:
+      name: production
+      url: ${{ vars.SITE_URL }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build
+        run: go run ./cmd/garage build -out public
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gils-garage-deploy-${{ github.run_id }}
+
+      - name: Sync to S3
+        env:
+          BUCKET: ${{ vars.SITE_BUCKET }}
+        run: |
+          # Fingerprint-free assets: modest cache. HTML/feed: always revalidate.
+          aws s3 sync public "s3://${BUCKET}" --delete \
+            --exclude "*.html" --exclude "feed.xml" \
+            --cache-control "public, max-age=86400"
+          aws s3 sync public "s3://${BUCKET}" --delete \
+            --exclude "*" --include "*.html" --include "feed.xml" \
+            --cache-control "public, max-age=0, must-revalidate"
+
+      - name: Invalidate CloudFront
+        env:
+          DIST: ${{ vars.CF_DISTRIBUTION_ID }}
+        run: aws cloudfront create-invalidation --distribution-id "${DIST}" --paths "/*"

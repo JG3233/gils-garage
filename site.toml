@@ -1,0 +1,4 @@
+title = "Gil's Garage"
+description = "Notes on cloud security, CI/CD, and AI agents."
+base_url = "https://example.com"   # TODO: set to your real domain
+author = "Jacob Gilhaus"

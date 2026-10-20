@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{if .Title}}{{.Title}} · {{end}}{{.Site.Title}}</title>
+  <meta name="description" content="{{if .Post}}{{.Post.Summary}}{{else}}{{.Site.Description}}{{end}}">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="alternate" type="application/atom+xml" title="{{.Site.Title}}" href="/feed.xml">
+</head>
+<body>
+  <header class="site-header">
+    <a class="site-title" href="/">{{.Site.Title}}</a>
+    <nav><a href="/feed.xml">Atom</a></nav>
+  </header>
+  <main>
+{{block "content" .}}{{end}}
+  </main>
+  <footer class="site-footer">© {{.Year}} {{.Site.Author}}</footer>
+</body>
+</html>
