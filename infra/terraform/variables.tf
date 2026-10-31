@@ -9,10 +9,21 @@ variable "region" {
   default     = "us-east-2"
 }
 
-variable "github_repo" {
-  description = "owner/repo allowed to assume the deploy role."
+variable "github_sub_prefix" {
+  description = <<-EOT
+    Repo part of the GitHub OIDC `sub` claim allowed to assume the deploy role. This repo uses
+    GitHub's immutable subject format (owner and repo IDs, so a renamed/re-registered account
+    cannot match). Read it with:
+      gh api repos/JG3233/gils-garage/actions/oidc/customization/sub --jq .sub_claim_prefix
+    Matched case-sensitively by IAM.
+  EOT
   type        = string
-  default     = "JG3233/gils-garage"
+  default     = "repo:JG3233@47641679/gils-garage@1426422781"
+
+  validation {
+    condition     = can(regex("^repo:[^:]+$", var.github_sub_prefix))
+    error_message = "Must look like repo:<owner>/<repo> or repo:<owner>@<id>/<repo>@<id>, with no trailing :context."
+  }
 }
 
 variable "github_environment" {
