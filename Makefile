@@ -1,4 +1,4 @@
-.PHONY: build serve test lint tf-fmt tf-validate check new clean
+.PHONY: build serve test lint tf-fmt tf-validate check verify new clean
 
 build:            ## Render the site into ./public
 	go run ./cmd/garage build
@@ -23,6 +23,9 @@ tf-validate:
 	terraform -chdir=infra/terraform validate
 
 check: test lint tf-validate   ## What CI runs
+
+verify:           ## Read-only check of GitHub env + AWS + live site wiring
+	scripts/verify-deploy-setup.sh
 
 clean:
 	rm -rf public
