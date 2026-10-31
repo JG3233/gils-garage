@@ -55,6 +55,8 @@ Add **environment variables** (not secrets — none of these are sensitive):
 
 Also set `base_url` in `site.toml` to your real domain.
 
+Then run `make verify` from the repo root. It is read-only and checks that the environment, its branch rule and reviewers, and every variable match the Terraform outputs, and that the role trust policy, certificate, CloudFront distribution, DNS and security headers are live.
+
 ## 4. Ship
 
 Push to `main` (or run **Actions → Deploy → Run workflow**). The job tests, builds, assumes the role via OIDC, syncs to S3, and invalidates CloudFront.
