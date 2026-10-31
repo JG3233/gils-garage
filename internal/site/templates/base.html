@@ -5,12 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{if .Title}}{{.Title}} · {{end}}{{.Site.Title}}</title>
   <meta name="description" content="{{if .Post}}{{.Post.Summary}}{{else}}{{.Site.Description}}{{end}}">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/style.css">
   <link rel="alternate" type="application/atom+xml" title="{{.Site.Title}}" href="/feed.xml">
 </head>
 <body>
   <header class="site-header">
-    <a class="site-title" href="/">{{.Site.Title}}</a>
+    <a class="site-title" href="/"><img class="site-logo" src="/img/logo-mark.png" alt="" width="40" height="40">{{.Site.Title}}</a>
     <nav><a href="/feed.xml">Atom</a></nav>
   </header>
   <main>
