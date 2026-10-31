@@ -9,6 +9,12 @@ variable "region" {
   default     = "us-east-2"
 }
 
+variable "github_repo" {
+  description = "owner/repo, used for resource tags."
+  type        = string
+  default     = "JG3233/gils-garage"
+}
+
 variable "github_sub_prefix" {
   description = <<-EOT
     Repo part of the GitHub OIDC `sub` claim allowed to assume the deploy role. This repo uses
