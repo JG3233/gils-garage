@@ -5,6 +5,7 @@
 
 # terraform
 .terraform/
+.terraform*
 *.tfstate
 *.tfstate.*
 *.tfvars
@@ -12,9 +13,13 @@
 backend.hcl
 crash.log
 .terraform.tfstate.lock.info
+*tfplan
 
 # editors / OS
 .DS_Store
 .idea/
 .vscode/
 *.swp
+
+# agents
+.claude
