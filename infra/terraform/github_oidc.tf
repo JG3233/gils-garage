@@ -29,10 +29,11 @@ data "aws_iam_policy_document" "deploy_trust" {
     }
     # Only the deploy job running in the protected environment can assume this role:
     # not PRs, not forks, not other branches or workflows without that environment.
+    # The prefix pins owner and repo by immutable ID (see var.github_sub_prefix).
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:environment:${var.github_environment}"]
+      values   = ["${var.github_sub_prefix}:environment:${var.github_environment}"]
     }
   }
 }

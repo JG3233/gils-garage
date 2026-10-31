@@ -103,12 +103,19 @@ role_name="${ROLE_ARN##*/}"
 trust=$(aws iam get-role --role-name "$role_name" --query Role.AssumeRolePolicyDocument --output json 2>/dev/null)
 if [[ -n "$trust" ]]; then
   sub=$(jq -r '[.Statement[].Condition.StringEquals["token.actions.githubusercontent.com:sub"]] | flatten | join(",")' <<<"$trust")
-  want_sub="repo:$REPO:environment:$ENV_NAME"
-  # GitHub's sub claim is case-insensitive on owner/repo; compare lowercased.
-  if [[ "$(tr '[:upper:]' '[:lower:]' <<<"$sub")" == "$(tr '[:upper:]' '[:lower:]' <<<"$want_sub")" ]]; then
-    ok "role trust policy only accepts $sub"
+  # Build the sub GitHub will actually send. Repos can use a custom or immutable (ID-based)
+  # subject format, so ask GitHub for the prefix instead of assuming repo:<owner>/<repo>.
+  prefix=$(gh api "repos/$REPO/actions/oidc/customization/sub" --jq '.sub_claim_prefix // empty' 2>/dev/null)
+  custom_keys=$(gh api "repos/$REPO/actions/oidc/customization/sub" --jq '(.include_claim_keys // []) | join(",")' 2>/dev/null)
+  if [[ -n "$custom_keys" ]]; then
+    meh "repo uses custom OIDC claim keys ($custom_keys) - check the trust policy sub by hand"
+  fi
+  want_sub="${prefix:-repo:$REPO}:environment:$ENV_NAME"
+  # IAM StringEquals is case-sensitive, so compare exactly.
+  if [[ "$sub" == "$want_sub" ]]; then
+    ok "role trust policy matches GitHub's sub: $sub"
   else
-    bad "role trust sub is '$sub' (expected '$want_sub')"
+    bad "role trust sub is '$sub' but GitHub sends '$want_sub'"
   fi
   provider=$(jq -r '.Statement[0].Principal.Federated' <<<"$trust")
   if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$provider" >/dev/null 2>&1; then

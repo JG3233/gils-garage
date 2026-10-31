@@ -31,7 +31,7 @@ Requires Go 1.24+. `make lint` needs [golangci-lint v2](https://golangci-lint.ru
 
 ## Security posture
 
-- **No AWS keys in GitHub.** Deploys assume an IAM role via OIDC; the trust policy accepts only `repo:JG3233/gils-garage:environment:production`.
+- **No AWS keys in GitHub.** Deploys assume an IAM role via OIDC; the trust policy accepts only `repo:JG3233@47641679/gils-garage@1426422781:environment:production` (GitHub's immutable subject format: owner and repo are pinned by ID, so a renamed or re-registered account can't match).
 - **Least-privilege deploy role:** `s3:ListBucket`/`PutObject`/`DeleteObject` on one bucket, `cloudfront:CreateInvalidation` on one distribution.
 - **Private origin:** S3 public access fully blocked; CloudFront reads via Origin Access Control; TLS-only bucket policy.
 - **Security headers** at the edge: HSTS (preload), strict CSP, `nosniff`, `frame-ancestors 'none'`, Permissions-Policy.

@@ -26,7 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # The OIDC trust policy only accepts tokens whose sub is
-    # repo:JG3233/gils-garage:environment:production, so this line is load-bearing.
+    # repo:JG3233@47641679/gils-garage@1426422781:environment:production (immutable owner/repo IDs),
+    # so this line is load-bearing.
     environment:
       name: production
       url: ${{ vars.SITE_URL }}

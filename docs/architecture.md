@@ -32,7 +32,7 @@ viewer ──HTTPS──► CloudFront ──OAC (SigV4)──► S3 (private, v
 
 ```
 GitHub Actions job (environment: production)
-   └─ OIDC token  sub=repo:JG3233/gils-garage:environment:production  aud=sts.amazonaws.com
+   └─ OIDC token  sub=repo:JG3233@47641679/gils-garage@1426422781:environment:production  aud=sts.amazonaws.com
         └─ sts:AssumeRoleWithWebIdentity → gils-garage-deploy (1h session)
              ├─ s3:ListBucket, PutObject, DeleteObject  (site bucket only)
              └─ cloudfront:CreateInvalidation           (this distribution only)
