@@ -97,10 +97,67 @@ func TestDuplicateSlug(t *testing.T) {
 	}
 }
 
+func TestEmptySlugOrTag(t *testing.T) {
+	dir := t.TempDir()
+	writePost(t, dir, "slug.md", "+++\ntitle = \"A\"\ndate = 2026-01-01\nslug = \"!!!\"\n+++\n")
+	writePost(t, dir, "tag.md", "+++\ntitle = \"B\"\ndate = 2026-01-01\ntags = [\"ok\", \"???\"]\n+++\n")
+	for _, f := range []string{"slug.md", "tag.md"} {
+		if _, err := ParsePost(filepath.Join(dir, f), NewMarkdown()); err == nil {
+			t.Errorf("%s: expected error for slug/tag with no letters or digits", f)
+		}
+	}
+}
+
 func TestSafeOutDir(t *testing.T) {
-	for _, d := range []string{"", "/", "."} {
-		if err := safeOutDir(d); err == nil {
+	root := t.TempDir()
+	t.Chdir(root)
+	t.Setenv("HOME", filepath.Join(root, "home"))
+	for _, d := range []string{"content/posts", "static", "home", "notbuild", "empty", "prev"} {
+		if err := os.MkdirAll(d, 0o750); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writePost(t, "notbuild", "main.go", "package main\n")
+	writePost(t, "prev", "404.html", "")
+	writePost(t, "prev", "feed.xml", "")
+
+	for _, d := range []string{"", "/", ".", "..", "home", "content", "content/posts", "static", "static/out", "notbuild"} {
+		if err := safeOutDir(Options{OutDir: d, ContentDir: "content", StaticDir: "static"}); err == nil {
 			t.Errorf("safeOutDir(%q) should refuse", d)
 		}
+	}
+	for _, d := range []string{"public", "empty", "prev"} {
+		if err := safeOutDir(Options{OutDir: d, ContentDir: "content", StaticDir: "static"}); err != nil {
+			t.Errorf("safeOutDir(%q) = %v, want ok", d, err)
+		}
+	}
+}
+
+func TestStaticSymlinkRejectedBeforeWipe(t *testing.T) {
+	root := t.TempDir()
+	posts := filepath.Join(root, "content", "posts")
+	static := filepath.Join(root, "static")
+	out := filepath.Join(root, "public")
+	for _, d := range []string{posts, static, out} {
+		if err := os.MkdirAll(d, 0o750); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writePost(t, posts, "2026-01-01-a.md", "+++\ntitle = \"A\"\ndate = 2026-01-01\n+++\n")
+	writePost(t, root, "secret", "TOPSECRET")
+	if err := os.Symlink(filepath.Join(root, "secret"), filepath.Join(static, "leak")); err != nil {
+		t.Skip("symlinks unsupported:", err)
+	}
+	// A previous build that must survive the failed one.
+	writePost(t, out, "404.html", "")
+	writePost(t, out, "feed.xml", "")
+
+	cfg := Config{Title: "Test", BaseURL: "https://example.com"}
+	err := Build(cfg, Options{ContentDir: filepath.Join(root, "content"), StaticDir: static, OutDir: out})
+	if err == nil || !strings.Contains(err.Error(), "symlink") {
+		t.Fatalf("expected symlink error, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "feed.xml")); err != nil {
+		t.Error("failed build wiped the previous output")
 	}
 }

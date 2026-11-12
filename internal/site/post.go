@@ -83,9 +83,16 @@ func ParsePost(path string, md Markdown) (Post, error) {
 		base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 		p.Slug = datePrefix.ReplaceAllString(base, "")
 	}
+	// An empty slug would render to /posts/index.html (or /tags/index.html) and clobber the listing.
 	p.Slug = Slugify(p.Slug)
+	if p.Slug == "" {
+		return Post{}, fmt.Errorf("%s: slug has no letters or digits", path)
+	}
 	for i, t := range p.Tags {
 		p.Tags[i] = Slugify(t)
+		if p.Tags[i] == "" {
+			return Post{}, fmt.Errorf("%s: tag %q has no letters or digits", path, t)
+		}
 	}
 	html, err := md.Render(body)
 	if err != nil {

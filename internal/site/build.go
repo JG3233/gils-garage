@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -41,7 +42,7 @@ type tagCount struct {
 
 // Build renders the whole site into opts.OutDir.
 func Build(cfg Config, opts Options) error {
-	if err := safeOutDir(opts.OutDir); err != nil {
+	if err := safeOutDir(opts); err != nil {
 		return err
 	}
 	posts, err := LoadPosts(filepath.Join(opts.ContentDir, "posts"), NewMarkdown(), opts.IncludeDrafts)
@@ -51,6 +52,11 @@ func Build(cfg Config, opts Options) error {
 	tmpl, err := parseTemplates()
 	if err != nil {
 		return err
+	}
+	if opts.StaticDir != "" {
+		if err := checkStatic(opts.StaticDir); err != nil {
+			return err
+		}
 	}
 	if err := os.RemoveAll(opts.OutDir); err != nil {
 		return err
@@ -102,17 +108,82 @@ func Build(cfg Config, opts Options) error {
 	return nil
 }
 
-func safeOutDir(dir string) error {
-	abs, err := filepath.Abs(dir)
+// safeOutDir refuses output dirs that would be dangerous to wipe: anything that is or contains the
+// working dir or $HOME, anything that overlaps the content or static dirs, and any existing
+// non-empty dir that doesn't look like a previous build (so -out internal can't delete source).
+func safeOutDir(opts Options) error {
+	dir := opts.OutDir
+	refuse := func(why string) error {
+		return fmt.Errorf("refusing to use %q as output dir (it gets wiped): %s", dir, why)
+	}
+	if dir == "" {
+		return refuse("empty path")
+	}
+	out, err := filepath.Abs(dir)
 	if err != nil {
 		return err
 	}
 	wd, _ := os.Getwd()
 	home, _ := os.UserHomeDir()
-	if dir == "" || abs == "/" || abs == wd || abs == home {
-		return fmt.Errorf("refusing to use %q as output dir (it gets wiped)", dir)
+	for _, p := range []struct{ name, path string }{{"working directory", wd}, {"home directory", home}} {
+		if p.path != "" && within(p.path, out) {
+			return refuse("it contains the " + p.name)
+		}
+	}
+	for _, p := range []struct{ name, path string }{{"content", opts.ContentDir}, {"static", opts.StaticDir}} {
+		if p.path == "" {
+			continue
+		}
+		abs, err := filepath.Abs(p.path)
+		if err != nil {
+			return err
+		}
+		if within(abs, out) || within(out, abs) {
+			return refuse("it overlaps the " + p.name + " dir")
+		}
+	}
+	entries, err := os.ReadDir(out)
+	if errors.Is(err, fs.ErrNotExist) || (err == nil && len(entries) == 0) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, marker := range []string{"404.html", "feed.xml"} {
+		if _, err := os.Stat(filepath.Join(out, marker)); err != nil {
+			return refuse("it isn't empty and doesn't look like a previous build (no " + marker + ")")
+		}
 	}
 	return nil
+}
+
+// within reports whether path is dir itself or somewhere inside it.
+func within(path, dir string) bool {
+	rel, err := filepath.Rel(dir, path)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// checkStatic rejects symlinks anywhere in the static dir. Go >= 1.25's os.CopyFS recreates them
+// in the output, and `aws s3 sync` follows links, which would publish whatever they point at.
+// A missing static dir is fine.
+func checkStatic(src string) error {
+	root, err := os.OpenRoot(src)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+	return fs.WalkDir(root.FS(), ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Type()&fs.ModeSymlink != 0 {
+			return fmt.Errorf("%s: symlinks are not allowed in the static dir", filepath.Join(src, p))
+		}
+		return nil
+	})
 }
 
 func parseTemplates() (map[string]*template.Template, error) {

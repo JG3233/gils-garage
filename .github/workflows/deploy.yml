@@ -61,10 +61,11 @@ jobs:
           BUCKET: ${{ vars.SITE_BUCKET }}
         run: |
           # Fingerprint-free assets: modest cache. HTML/feed: always revalidate.
-          aws s3 sync public "s3://${BUCKET}" --delete \
+          # --no-follow-symlinks backs up the build's own symlink check: never publish a link's target.
+          aws s3 sync public "s3://${BUCKET}" --delete --no-follow-symlinks \
             --exclude "*.html" --exclude "feed.xml" \
             --cache-control "public, max-age=86400"
-          aws s3 sync public "s3://${BUCKET}" --delete \
+          aws s3 sync public "s3://${BUCKET}" --delete --no-follow-symlinks \
             --exclude "*" --include "*.html" --include "feed.xml" \
             --cache-control "public, max-age=0, must-revalidate"
 

@@ -10,9 +10,9 @@
 4. Render with `html/template` (templates embedded in the binary from `internal/site/templates/`):
    - `/index.html`, `/posts/<slug>/index.html`, `/tags/<tag>/index.html`, `/404.html`
    - `/feed.xml` — Atom, latest 20 posts, full content
-5. Copy `static/` into the output root. A static file that collides with a generated page is an error.
+5. Copy `static/` into the output root. A static file that collides with a generated page is an error, and so is any symlink in `static/` (checked before anything is wiped).
 
-The output directory is wiped first; the CLI refuses to wipe `/`, `$HOME`, or the working directory.
+The output directory is wiped first, so the build refuses any output path that is or contains the working directory or `$HOME`, overlaps `content/` or `static/`, or is a non-empty directory that doesn't look like a previous build.
 
 ## Serving
 
