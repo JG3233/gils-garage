@@ -24,6 +24,7 @@ viewer ──HTTPS──► CloudFront ──OAC (SigV4)──► S3 (private, v
                     └─ 403/404 from origin → /404.html (404)
 ```
 
+- CSP: `default-src 'self'; img-src 'self' data: https:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`. Scripts and styles must be files served by the site (no inline `<script>` or `style=""`). `img-src` is the one loosened directive, so posts can embed `data:` URIs and images from any HTTPS host. Tightening it to `'self'` means every image lives in `static/img/`.
 - ACM certificate in `us-east-1` (CloudFront requirement), DNS-validated through Route 53.
 - `PriceClass_100` (NA + EU edges), HTTP/2 + HTTP/3, IPv6.
 - Cache: `Managed-CachingOptimized`. HTML/feed are uploaded with `max-age=0, must-revalidate`; everything else `max-age=86400`. Each deploy invalidates `/*` (free tier covers 1,000 paths/month; `/*` counts as one).
