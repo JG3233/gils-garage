@@ -32,9 +32,43 @@ draft = true
 
 ## Body
 
-GitHub-flavored Markdown: tables, task lists, strikethrough, autolinks, footnotes, fenced code. Raw HTML is escaped on purpose; if a post genuinely needs it, that's a deliberate engine change.
+Standard Markdown, plus a few extras.
 
-Images: put them in `static/img/` and reference as `/img/name.png`.
+### What works
+
+| Feature | Write | Notes |
+|---|---|---|
+| Headings, bold, italics, lists, links, quotes | the usual | Standard Markdown (CommonMark) |
+| Code | ```` ```go ```` fenced blocks or `` `inline` `` | Shown as plain monospace, **no syntax colors** |
+| Tables | `\| a \| b \|` with a `\|---\|---\|` row | |
+| Strikethrough | `~~gone~~` | |
+| Task lists | `- [ ] todo` / `- [x] done` | |
+| Bare links | `https://example.com` | Becomes a link automatically |
+| Footnotes | `text[^1]` … `[^1]: the note` | |
+| Smart punctuation | `"quotes"`, `--`, `...` | Become curly quotes, –, and … |
+| Heading links | `## Setup` | Gets `id="setup"`, so `/posts/x/#setup` links to it |
+| Images | `![alt text](/img/name.png)` | Put the file in `static/img/` |
+
+### What doesn't work (on purpose or not yet)
+
+- **Raw HTML** is shown as text, not rendered. `<script>` comes out as `&lt;script&gt;`. This is a security choice.
+- **No syntax highlighting, emoji shortcodes (`:rocket:`), Mermaid diagrams, or `> [!NOTE]` callouts.** These work on github.com but not here.
+- **Images from other sites** work (any `https://` URL), but local files in `static/img/` are preferred.
+
+### Under the hood
+
+The engine is [goldmark](https://github.com/yuin/goldmark), a Go Markdown library, configured in [`internal/site/markdown.go`](../internal/site/markdown.go) with three extensions:
+
+- **GFM**: tables, strikethrough, bare links, task lists (GitHub Flavored Markdown's additions)
+- **Footnote**
+- **Typographer**: smart punctuation
+
+Plus automatic heading IDs.
+
+To add a feature (syntax highlighting, callouts, lazy-loaded images…), add a goldmark extension or write a small custom one in that file. Nothing else imports goldmark. Two rules:
+
+1. Never enable `html.WithUnsafe()`. Posts are trusted as safe HTML only because goldmark escapes raw HTML.
+2. Anything that adds styling must use CSS classes in `static/style.css`. The site's CSP blocks inline `style=""` attributes.
 
 ## Publishing
 
