@@ -23,3 +23,7 @@ crash.log
 
 # agents
 .claude
+
+# local files
+/local/
+*.env
