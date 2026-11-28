@@ -22,6 +22,7 @@ type Post struct {
 	Summary string    `toml:"summary"`
 	Tags    []string  `toml:"tags"`
 	Slug    string    `toml:"slug"`
+	Image   string    `toml:"image"` // optional site-relative social card image, e.g. /img/foo.png
 	Draft   bool      `toml:"draft"`
 
 	Body       template.HTML `toml:"-"`
@@ -93,6 +94,10 @@ func ParsePost(path string, md Markdown) (Post, error) {
 		if p.Tags[i] == "" {
 			return Post{}, fmt.Errorf("%s: tag %q has no letters or digits", path, t)
 		}
+	}
+	// Image is concatenated onto base_url for og:image, so it must be a site-relative path.
+	if p.Image != "" && (!strings.HasPrefix(p.Image, "/") || strings.HasPrefix(p.Image, "//")) {
+		return Post{}, fmt.Errorf("%s: image must be a site-relative path starting with /, got %q", path, p.Image)
 	}
 	html, err := md.Render(body)
 	if err != nil {
