@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{if .Title}}{{.Title}} · {{end}}{{.Site.Title}}</title>
   <meta name="description" content="{{if .Post}}{{.Post.Summary}}{{else}}{{.Site.Description}}{{end}}">
+{{- $desc := .Site.Description}}{{if .Post}}{{$desc = .Post.Summary}}{{end}}
+{{- $url := print .Site.BaseURL "/"}}{{if .Post}}{{$url = print .Site.BaseURL .Post.URL}}{{end}}
+{{- $img := print .Site.BaseURL "/img/og-default.png"}}{{if and .Post .Post.Image}}{{$img = print .Site.BaseURL .Post.Image}}{{end}}
+  <link rel="canonical" href="{{$url}}">
+  <meta property="og:site_name" content="{{.Site.Title}}">
+  <meta property="og:type" content="{{if .Post}}article{{else}}website{{end}}">
+  <meta property="og:title" content="{{if .Title}}{{.Title}}{{else}}{{.Site.Title}}{{end}}">
+  <meta property="og:description" content="{{$desc}}">
+  <meta property="og:url" content="{{$url}}">
+  <meta property="og:image" content="{{$img}}">
+  <meta property="og:image:alt" content="{{if .Title}}{{.Title}} · {{end}}{{.Site.Title}}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@gilsgarage">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">

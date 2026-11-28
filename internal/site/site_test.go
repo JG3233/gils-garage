@@ -50,7 +50,7 @@ func TestBuild(t *testing.T) {
 		t.Fatal(err)
 	}
 	writePost(t, posts, "2026-01-02-second.md", "+++\ntitle = \"Second\"\ndate = 2026-01-02\ntags = [\"Cloud Security\"]\n+++\nHi <script>alert(1)</script>\n")
-	writePost(t, posts, "2026-01-01-first.md", "+++\ntitle = \"First\"\ndate = 2026-01-01\n+++\n# Heading\n")
+	writePost(t, posts, "2026-01-01-first.md", "+++\ntitle = \"First\"\ndate = 2026-01-01\nimage = \"/img/first.png\"\n+++\n# Heading\n")
 	writePost(t, posts, "2026-01-03-wip.md", "+++\ntitle = \"WIP\"\ndate = 2026-01-03\ndraft = true\n+++\nsecret\n")
 
 	out := filepath.Join(root, "public")
@@ -81,6 +81,23 @@ func TestBuild(t *testing.T) {
 	if p := read("posts/second/index.html"); strings.Contains(p, "<script>alert") {
 		t.Error("raw HTML in markdown must be escaped")
 	}
+	second := read("posts/second/index.html")
+	for _, want := range []string{
+		`<meta property="og:url" content="https://example.com/posts/second/">`,
+		`<meta property="og:image" content="https://example.com/img/og-default.png">`,
+		`<meta property="og:type" content="article">`,
+		`<meta name="twitter:card" content="summary_large_image">`,
+	} {
+		if !strings.Contains(second, want) {
+			t.Errorf("post page missing %s", want)
+		}
+	}
+	if p := read("posts/first/index.html"); !strings.Contains(p, `<meta property="og:image" content="https://example.com/img/first.png">`) {
+		t.Error("per-post image not used for og:image")
+	}
+	if !strings.Contains(index, `<meta property="og:type" content="website">`) {
+		t.Error("index should be og:type website")
+	}
 	read("tags/cloud-security/index.html")
 	read("404.html")
 	if feed := read("feed.xml"); !strings.Contains(feed, "https://example.com/posts/second/") {
@@ -104,6 +121,17 @@ func TestEmptySlugOrTag(t *testing.T) {
 	for _, f := range []string{"slug.md", "tag.md"} {
 		if _, err := ParsePost(filepath.Join(dir, f), NewMarkdown()); err == nil {
 			t.Errorf("%s: expected error for slug/tag with no letters or digits", f)
+		}
+	}
+}
+
+func TestImageMustBeSiteRelative(t *testing.T) {
+	dir := t.TempDir()
+	for i, img := range []string{"img/x.png", "//evil.example/x.png", "https://evil.example/x.png"} {
+		f := filepath.Join(dir, "p"+string(rune('a'+i))+".md")
+		writePost(t, dir, filepath.Base(f), "+++\ntitle = \"A\"\ndate = 2026-01-01\nimage = \""+img+"\"\n+++\n")
+		if _, err := ParsePost(f, NewMarkdown()); err == nil {
+			t.Errorf("image %q: expected error", img)
 		}
 	}
 }
